@@ -46,18 +46,18 @@
 
 (tm-define (parse-normal-cmd l)
   (if (null? l)
-      (list l '(#:none #f))
-      (let ((fc (car l)))
-        (cond
-          ((member fc compound-cmds)
-            (list (cdr l) (list #:cmpd fc)))
-          ((member fc search-cmds)
-            (list (cdr l) (list #:search fc)))
-          ((member fc hjkl-cmds)
-            (list (cdr l) (list #:hjkl fc)))
-          ((member fc mark-cmds)
-            (list (cdr l) (list #:mark fc)))
-          (else (list (cdr l) (list #:invalid fc)))))))
+    (list l '(#:none #f))
+    (let ((fc (car l)))
+      (cond
+        ((member fc compound-cmds)
+          (list (cdr l) (list #:cmpd fc)))
+        ((member fc search-cmds)
+          (list (cdr l) (list #:search fc)))
+        ((member fc hjkl-cmds)
+          (list (cdr l) (list #:hjkl fc)))
+        ((member fc mark-cmds)
+          (list (cdr l) (list #:mark fc)))
+        (else (list (cdr l) (list #:invalid fc)))))))
 
 ; (parse-normal-cmd '())
 ; (parse-normal-cmd '("0"))
@@ -68,7 +68,8 @@
 ; (parse-normal-cmd '("f"))
 
 (tm-define (parse-search-char l)
-  (if (null? l) #f
+  (if (null? l) 
+      #f
       (car l)))
 
 (tm-define parse-mark-char parse-search-char)
