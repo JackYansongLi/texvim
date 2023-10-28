@@ -3,37 +3,39 @@
 (tm-define digits '("1" "2" "3" "4" "5" "6" "7" "8" "9" ))
 (tm-define natural-digits '("1" "2" "3" "4" "5" "6" "7" "8" "9" "0"))
 
+;; The function parse-prefix and parse-posfix returns the digits in the prefix of vim commands, which represents numbers of lines to move, number of word to delete, etc.
+;; Examples:
+;    (tm-define l1 '("0" "1" "2"))
+;    (tm-define l2 '("2" "a" "2"))
+;    (tm-define l3 '("2" "3" "2"))
+;    Scheme] (parse-prefix l1) 
+;      (("0", "1", "2") ())
+;    Scheme] (parse-prefix l2) 
+;      (("a" "2") ("2")) 
+;    Scheme] (parse-prefix l3) 
+;      (() ("2" "3" "2")) 
+
 (tm-define (parse-number l prefix-repeat)
-  (if (null? l) (list l prefix-repeat)
+  (if (null? l)
+      (list l prefix-repeat)
       (let ((fc (car l)))
-	(if (and (equal? fc "0") (null? prefix-repeat))
-	    (list l '())
-	    (if (member fc natural-digits)
-		(parse-number (cdr l) (append prefix-repeat (list fc)))
-		(list l prefix-repeat))))))
+        (if (and (equal? fc "0") (null? prefix-repeat))
+            (list l '())
+            (if (member fc natural-digits)
+                (parse-number (cdr l) (append prefix-repeat (list fc)))
+                (list l prefix-repeat))))))
 
 (tm-define (parse-prefix l) (parse-number l '()))
-
-(tm-define l1 '("0" "1" "2"))
-(tm-define l2 '("2" "a" "2"))
-(tm-define l3 '("2" "3" "2"))
-
-(parse-prefix l1 ) 
-(parse-prefix l2 ) 
-(parse-prefix l3 ) 
-
 (tm-define (parse-posfix l) (parse-number l '()))
 
 (tm-define hjkl-cmds '(
-		       "h" "j" "k" "l" "b" "B" "%" "w"
-		       "e" "0" "D" "$" "f" "F" "/" "i" 
-		       "s" "a" "Y" "S" ";" "{" "}" "u"
-		       "." "x" "o" "O" "P" "A" "#" "*"
-		       "p" "n" "N" "I" "G" "W" "B" "&"
-		       "R" "L" "(" ")" "[" "]"
-		       "return" "backspace"))
-
-
+                        "h" "j" "k" "l" "b" "B" "%" "w"
+                        "e" "0" "D" "$" "f" "F" "/" "i" 
+                        "s" "a" "Y" "S" ";" "{" "}" "u"
+                        "." "x" "o" "O" "P" "A" "#" "*"
+                        "p" "n" "N" "I" "G" "W" "B" "&"
+                        "R" "L" "(" ")" "[" "]"
+                        "return" "backspace"))
 
 (tm-define compound-cmds '("d" "c" "y"))
 (tm-define search-cmds '("f" "t" "T" "F"))
@@ -45,25 +47,25 @@
 (tm-define (parse-normal-cmd l)
   (if (null? l)
       (list l '(#:none #f))
-      (let ((c (car l)))
-	(cond
-	  ((member c compound-cmds)
-	   (list (cdr l) (list #:cmpd c)))
-	  ((member c search-cmds)
-	   (list (cdr l) (list #:search c)))
-	  ((member c hjkl-cmds)
-	   (list (cdr l) (list #:hjkl c)))
-	  ((member c mark-cmds)
-	   (list (cdr l) (list #:mark c)))
-	  (else (list (cdr l) (list #:invalid c)))))))
+      (let ((fc (car l)))
+        (cond
+          ((member fc compound-cmds)
+            (list (cdr l) (list #:cmpd fc)))
+          ((member fc search-cmds)
+            (list (cdr l) (list #:search fc)))
+          ((member fc hjkl-cmds)
+            (list (cdr l) (list #:hjkl fc)))
+          ((member fc mark-cmds)
+            (list (cdr l) (list #:mark fc)))
+          (else (list (cdr l) (list #:invalid fc)))))))
 
-(parse-normal-cmd '())
-(parse-normal-cmd '("0"))
-(parse-normal-cmd '("o"))
-(parse-normal-cmd '("d"))
-(parse-normal-cmd '("d" "2"))
-(parse-normal-cmd '("o" "2"))
-(parse-normal-cmd '("f"))
+; (parse-normal-cmd '())
+; (parse-normal-cmd '("0"))
+; (parse-normal-cmd '("o"))
+; (parse-normal-cmd '("d"))
+; (parse-normal-cmd '("d" "2"))
+; (parse-normal-cmd '("o" "2"))
+; (parse-normal-cmd '("f"))
 
 (tm-define (parse-search-char l)
   (if (null? l) #f
