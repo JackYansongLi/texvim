@@ -3,10 +3,11 @@
 ;; TODO: parse cmds with numbers
 
 (texmacs-module (vi)
-  ;;  (:use (generic generic-kbd)
+   ;; (:use (generic generic-kbd)
   )
 
-(load "normal.scm")
+;; (load "normal.scm")
+(import-from (normal))
 (define-public cmd-buffer '())
 
 (define-public vim-active #f)
