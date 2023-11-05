@@ -18,58 +18,58 @@
 ;      (() ("2" "3" "2")) 
 
 (tm-define (parse-number l prefix-repeat)
-  (if (null? l)
-      (list l prefix-repeat)
-      (let ((fc (car l)))
-        (if (and (equal? fc "0") (null? prefix-repeat))
-            (list l '())
-            (if (member fc natural-digits)
-                (parse-number (cdr l) (append prefix-repeat (list fc)))
-                (list l prefix-repeat))))))
+           (if (null? l)
+               (list l prefix-repeat)
+               (let ((fc (car l)))
+                 (if (and (equal? fc "0") (null? prefix-repeat))
+                     (list l '())
+                     (if (member fc natural-digits)
+                         (parse-number (cdr l) (append prefix-repeat (list fc)))
+                         (list l prefix-repeat))))))
 (tm-define (parse-prefix l) (parse-number l '()))
 (tm-define (parse-posfix l) (parse-number l '()))
 
 ; TODO: move-cmds contains redundent cmds
 (tm-define move-cmds '(
-                        "h" "j" "k" "l" "b" "B" "%" "w"
-                        "e" "0" "D" "$" "f" "F" "/" "i" 
-                        "s" "a" "Y" "S" ";" "{" "}" "u"
-                        "." "x" "o" "O" "P" "A" "#" "*"
-                        "p" "n" "N" "I" "G" "W" "B" "&"
-                        "R" "L" "(" ")" "[" "]"
-                        "return" "backspace"))
+                       "h" "j" "k" "l" "b" "B" "%" "w"
+                           "e" "0" "D" "$" "f" "F" "/" "i" 
+                           "s" "a" "Y" "S" ";" "{" "}" "u"
+                           "." "x" "o" "O" "P" "A" "#" "*"
+                           "p" "n" "N" "I" "G" "W" "B" "&"
+                           "R" "L" "(" ")" "[" "]"
+                           "return" "backspace"))
 (tm-define compound-cmds '("d" "c" "y"))
 (tm-define search-cmds '("f" "t" "T" "F"))
 (tm-define mark-cmds '("m" "'" "`"))
 (tm-define normal-cmd-states
-  (append natural-digits move-cmds compound-cmds search-cmds mark-cmds))
+           (append natural-digits move-cmds compound-cmds search-cmds mark-cmds))
 
 ; (parse-normal-cmd '("d"))
 ;     Scheme] (parse-normal-cmd '("d" "2" "w"))
 ;       (("2" "w") (:cmpd "d"))
 
 (tm-define (parse-normal-cmd l)
-  (if (null? l)
-    (list l '(#:none #f))
-    (let ((fc (car l))) ; fc represents first character
-      (cond
-        ((member fc compound-cmds)
-          (list (cdr l) (list #:cmpd fc)))
-        ((member fc search-cmds)
-          (list (cdr l) (list #:search fc)))
-        ((member fc move-cmds)
-          (list (cdr l) (list #:hjkl fc)))
-        ((member fc mark-cmds)
-          (list (cdr l) (list #:mark fc)))
-        (else (list (cdr l) (list #:invalid fc)))))))
+           (if (null? l)
+               (list l '(#:none #f))
+               (let ((fc (car l))) ; fc represents first character
+                 (cond
+                   ((member fc compound-cmds)
+                    (list (cdr l) (list #:cmpd fc)))
+                   ((member fc search-cmds)
+                    (list (cdr l) (list #:search fc)))
+                   ((member fc move-cmds)
+                    (list (cdr l) (list #:hjkl fc)))
+                   ((member fc mark-cmds)
+                    (list (cdr l) (list #:mark fc)))
+                   (else (list (cdr l) (list #:invalid fc)))))))
 
 
 
 ;; The search and mark command can only be used as the first character of a vim command. Thus, the parse-search-char and parse-mark-char simply return the first character.
 (tm-define (parse-search-char l)
-  (if (null? l) 
-      #f
-      (car l)))
+           (if (null? l) 
+               #f
+               (car l)))
 (tm-define parse-mark-char parse-search-char)
 
 ;; now posfix-number
@@ -87,46 +87,46 @@
 ;   Scheme] (parse-cmpd-direction '("f" "f"))
 ;     (("f") :direction-by-search "f")
 (tm-define (parse-cmpd-direction l)
-  (if (null? l)
-      (list l #:no-direction #f)
-      (let ((fc (car l))) ; fc represents the first character of the input list
-	(cond
-	  ((member fc directions-simple) (list (cdr l) #:direction-simple fc))
-	  ((member fc directions-cmpd) (list (cdr l) #:direction-by-search fc))
-	  (else (list (cdr l) #:direction-invalid fc))))))
+           (if (null? l)
+               (list l #:no-direction #f)
+               (let ((fc (car l))) ; fc represents the first character of the input list
+                 (cond
+                   ((member fc directions-simple) (list (cdr l) #:direction-simple fc))
+                   ((member fc directions-cmpd) (list (cdr l) #:direction-by-search fc))
+                   (else (list (cdr l) #:direction-invalid fc))))))
 
 (tm-define (parse-all l)
-  (let* ((posfix-with-prefix-number (parse-prefix l))
-         (posfix-string (car posfix-with-prefix-number))
-         (prefix-no (cadr posfix-with-prefix-number))
-         (l2-cmd (parse-normal-cmd posfix-string))
-         (l2 (car l2-cmd))
-         (cmd-type (caadr l2-cmd))
-         (cmd-char (cadr (cadr l2-cmd)))
-         (l3-no (parse-posfix l2))
-         (l3 (car l3-no))
-         (posfix-no (cadr l3-no))
-         (l4 (parse-cmpd-direction l3))
-         (direction-search-char (parse-search-char (car l4))))
-    (cond
-      ((eqv? cmd-type #:search) (list prefix-no #:search cmd-char
-				      (parse-search-char l2)))
-      ((eqv? cmd-type #:mark) (list prefix-no #:mark cmd-char
-				    (parse-mark-char l2)))
-      ((eqv? cmd-type #:cmpd)
-       (if (equal? #:direction-invalid (cadr l4))
-	   #:invalid
-	   (append (list prefix-no cmd-type cmd-char posfix-no
-			 (if (equal?  #:direction-by-search (cadr l4))
-			     (list #:direction-by-search (caddr l4)
-				   (parse-search-char (car l4)))
-			     (list (cadr l4) (caddr l4))))
-		   )))
+           (let* ((posfix-with-prefix-number (parse-prefix l))
+                  (posfix-string (car posfix-with-prefix-number))
+                  (prefix-no (cadr posfix-with-prefix-number))
+                  (l2-cmd (parse-normal-cmd posfix-string))
+                  (l2 (car l2-cmd))
+                  (cmd-type (caadr l2-cmd))
+                  (cmd-char (cadr (cadr l2-cmd)))
+                  (l3-no (parse-posfix l2))
+                  (l3 (car l3-no))
+                  (posfix-no (cadr l3-no))
+                  (l4 (parse-cmpd-direction l3))
+                  (direction-search-char (parse-search-char (car l4))))
+             (cond
+               ((eqv? cmd-type #:search) (list prefix-no #:search cmd-char
+                                               (parse-search-char l2)))
+               ((eqv? cmd-type #:mark) (list prefix-no #:mark cmd-char
+                                             (parse-mark-char l2)))
+               ((eqv? cmd-type #:cmpd)
+                (if (equal? #:direction-invalid (cadr l4))
+                    #:invalid
+                    (append (list prefix-no cmd-type cmd-char posfix-no
+                                  (if (equal?  #:direction-by-search (cadr l4))
+                                      (list #:direction-by-search (caddr l4)
+                                            (parse-search-char (car l4)))
+                                      (list (cadr l4) (caddr l4))))
+                            )))
 
-      ((eqv? cmd-type #:hjkl) (list prefix-no cmd-type cmd-char))
+               ((eqv? cmd-type #:hjkl) (list prefix-no cmd-type cmd-char))
 
-      ((eqv? cmd-type #:none) (list prefix-no cmd-type cmd-char))
-      (else #:invalid))))
+               ((eqv? cmd-type #:none) (list prefix-no cmd-type cmd-char))
+               (else #:invalid))))
 
 
 ; ;; no cmd
@@ -179,70 +179,70 @@
 ; (parse-all '("2" "c" "F" "o"))
 
 (tm-define (invalid? l)
-  (equal? #:invalid l))
+           (equal? #:invalid l))
 
 (tm-define (valid-hjkl? l)
-  (and
-   (equal? (cadr l) #:hjkl )
-   (caddr l)))
+           (and
+            (equal? (cadr l) #:hjkl )
+            (caddr l)))
 
 (tm-define (hjkl-test l)
-  (valid-hjkl? (parse-all l)))
+           (valid-hjkl? (parse-all l)))
 
 (tm-define (valid-search? l)
-  (and
-   (equal? (cadr l) #:search )
-   (cadddr l)))
+           (and
+            (equal? (cadr l) #:search )
+            (cadddr l)))
 
 (tm-define (valid-mark? l)
-  (and
-   (equal? (cadr l) #:mark)
-   (cadddr l)))
+           (and
+            (equal? (cadr l) #:mark)
+            (cadddr l)))
 
 (tm-define hjkl-test (lambda (l) (valid-hjkl? (parse-all l))))
 (tm-define search-test (lambda (l) (valid-search? (parse-all l))))
 
 
 (tm-define (valid-cmpd? l)
-  (if (equal? (cadr l) #:cmpd)
-      (cAr (cAr l))
-      #f))
+           (if (equal? (cadr l) #:cmpd)
+               (cAr (cAr l))
+               #f))
 
 (tm-define (cmpd-test l)
-  (valid-cmpd? (parse-all l)))
+           (valid-cmpd? (parse-all l)))
 
 (tm-define (valid-cmd? l)
-  (or (valid-hjkl? l)
-      (valid-search? l)
-      (valid-cmpd? l)
-      (valid-mark? l)))
+           (or (valid-hjkl? l)
+               (valid-search? l)
+               (valid-cmpd? l)
+               (valid-mark? l)))
 
 (tm-define (valid-test l)
-  (valid-cmd? (parse-all l)))
+           (valid-cmd? (parse-all l)))
 
 (tm-define (lst->number l)
-  (if (null? l) 1
-      (string->number (join l))))
+           (if (null? l) 1
+               (string->number (join l))))
 
 (tm-define (prefix-number l)
-  (lst->number (car l)))
+           (lst->number (car l)))
 
 (tm-define (posfix-number l)
-  (if (or (<= (length l) 4) (null? (fourth l))) 1
-      (lst->number  (fourth l))))
+           (if (or (<= (length l) 4) (null? (fourth l))) 1
+               (lst->number  (fourth l))))
 
 (tm-define (--repeat-times l)
-  (* (prefix-number l) (posfix-number l)))
+           (* (prefix-number l) (posfix-number l)))
 
 (tm-define (-repeat-times l)
-  (let ((cmd-type (caddr l)))
-    (if (or (equal? l #:invalid)
-	    (equal? cmd-type #:mark))
-	1
-	(--repeat-times l))))
+           (let ((cmd-type (caddr l)))
+             (if (or (equal? l #:invalid)
+                     (equal? cmd-type #:mark))
+                 1
+                 (--repeat-times l))))
 
 (tm-define (repeat-times l)
-  (-repeat-times (parse-all l)))
+           (-repeat-times (parse-all l)))
 
 ;; mark implementation
 
@@ -252,64 +252,64 @@
 (tm-define jump-hist '()) 
 
 (tm-define (-get-mark-pos m l)
-  (if (null? l)
-      #f
-      (if (equal? m (caar l))
-	  (cdar l)
-	  (-get-mark-pos m (cdr l)))))
+           (if (null? l)
+               #f
+               (if (equal? m (caar l))
+                   (cdar l)
+                   (-get-mark-pos m (cdr l)))))
 
 (tm-define (get-mark-pos m)
-  (-get-mark-pos m mark-hist))
+           (-get-mark-pos m mark-hist))
 
 (tm-define (-exist-mark? m l)
-  (map (lambda (x) (equal? m (car x))) l))
+           (map (lambda (x) (equal? m (car x))) l))
 
 (tm-define (or-list l)
-  (if (null? l) #f
-      (or (car l) (or-list (cdr l)))))
+           (if (null? l) #f
+               (or (car l) (or-list (cdr l)))))
 
 (tm-define (exist-mark? m)
-  (or-list
-   (-exist-mark? m mark-hist)))
+           (or-list
+            (-exist-mark? m mark-hist)))
 
 (define (-update-mark-hist m pos l)
   (if (exist-mark? m)
       (map
        (lambda (x)
-	 (if (equal? m (car x))
-	     (cons m pos)
-	     x)) l)
+         (if (equal? m (car x))
+             (cons m pos)
+             x)) l)
       (rcons l (cons m pos) )))
 
 (tm-define (update-mark-hist m pos)
-  (set! mark-hist
-    (-update-mark-hist m pos mark-hist)))
+           (set! mark-hist
+                 (-update-mark-hist m pos mark-hist)))
 
 (tm-define set-mark-pos update-mark-hist)
 
 (tm-define (mark-quote-jump m)
-  (if (exist-mark? m)
-      (go-to-path (get-mark-pos m))
-      (set-message (string-append "Sorry, no marks named " m) "")))
+           (if (exist-mark? m)
+               (go-to-path (get-mark-pos m))
+               (set-message (string-append "Sorry, no marks named " m) "")))
 
 (tm-define (mark-backquote-jump m)
-  (begin
-    (mark-quote-jump m)
-    (kbd-start-line)))
+           (begin
+             (mark-quote-jump m)
+             (kbd-start-line)))
 
 (tm-define (update-jump-hist m)
-  (when (exist-mark? m)
-    (set! jump-hist
-      (cons m jump-hist))))
+           (when (exist-mark? m)
+             (set! jump-hist
+                   (cons m jump-hist))))
 
 (tm-define (update-insertion-pos)
-  (set-mark-pos "^" (cursor-path)))
+           (set-mark-pos "^" (cursor-path)))
 
 (tm-define (jump-to-last-insertion)
-  (mark-quote-jump "^"))
+           (mark-quote-jump "^"))
 
 (tm-define (jump-or-mark c m)
-  (cond
-    ((equal? c "m") (set-mark-pos m (cursor-path)))
-    ((equal? c "'") (mark-quote-jump m))
-    ((equal? c "`") (mark-backquote-jump m))))
+           (cond
+             ((equal? c "m") (set-mark-pos m (cursor-path)))
+             ((equal? c "'") (mark-quote-jump m))
+             ((equal? c "`") (mark-backquote-jump m))))
