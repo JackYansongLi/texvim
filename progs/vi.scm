@@ -6,7 +6,6 @@
    ;; (:use (generic generic-kbd)
   )
 
-;; (load "normal.scm")
 (import-from (normal))
 (define-public cmd-buffer '())
 
@@ -87,8 +86,6 @@
   (if (null? l) ""
       (let ((c (car l)))
 	(string-append (if (== c "space") " " c) (join (cdr l))))))
-
-
 
 (tm-define (skip-colon-space l)
   (if (null? l) '("")

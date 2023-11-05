@@ -26,11 +26,11 @@
             (if (member fc natural-digits)
                 (parse-number (cdr l) (append prefix-repeat (list fc)))
                 (list l prefix-repeat))))))
-
 (tm-define (parse-prefix l) (parse-number l '()))
 (tm-define (parse-posfix l) (parse-number l '()))
 
-(tm-define hjkl-cmds '(
+; TODO: move-cmds contains redundent cmds
+(tm-define move-cmds '(
                         "h" "j" "k" "l" "b" "B" "%" "w"
                         "e" "0" "D" "$" "f" "F" "/" "i" 
                         "s" "a" "Y" "S" ";" "{" "}" "u"
@@ -38,42 +38,38 @@
                         "p" "n" "N" "I" "G" "W" "B" "&"
                         "R" "L" "(" ")" "[" "]"
                         "return" "backspace"))
-
 (tm-define compound-cmds '("d" "c" "y"))
 (tm-define search-cmds '("f" "t" "T" "F"))
 (tm-define mark-cmds '("m" "'" "`"))
-
 (tm-define normal-cmd-states
-  (append natural-digits hjkl-cmds compound-cmds search-cmds mark-cmds))
+  (append natural-digits move-cmds compound-cmds search-cmds mark-cmds))
+
+; (parse-normal-cmd '("d"))
+;     Scheme] (parse-normal-cmd '("d" "2" "w"))
+;       (("2" "w") (:cmpd "d"))
 
 (tm-define (parse-normal-cmd l)
   (if (null? l)
     (list l '(#:none #f))
-    (let ((fc (car l)))
+    (let ((fc (car l))) ; fc represents first character
       (cond
         ((member fc compound-cmds)
           (list (cdr l) (list #:cmpd fc)))
         ((member fc search-cmds)
           (list (cdr l) (list #:search fc)))
-        ((member fc hjkl-cmds)
+        ((member fc move-cmds)
           (list (cdr l) (list #:hjkl fc)))
         ((member fc mark-cmds)
           (list (cdr l) (list #:mark fc)))
         (else (list (cdr l) (list #:invalid fc)))))))
 
-; (parse-normal-cmd '())
-; (parse-normal-cmd '("0"))
-; (parse-normal-cmd '("o"))
-; (parse-normal-cmd '("d"))
-; (parse-normal-cmd '("d" "2"))
-; (parse-normal-cmd '("o" "2"))
-; (parse-normal-cmd '("f"))
 
+
+;; The search and mark command can only be used as the first character of a vim command. Thus, the parse-search-char and parse-mark-char simply return the first character.
 (tm-define (parse-search-char l)
   (if (null? l) 
       #f
       (car l)))
-
 (tm-define parse-mark-char parse-search-char)
 
 ;; now posfix-number
@@ -81,43 +77,42 @@
 (tm-define directions-simple '("0" "h" "d" "l" "j" "k" "l" "$" "e" "b" "B" "w" "W" "*" "#" "n" "G"))
 (tm-define directions-cmpd search-cmds)
 
+; Examples: 
+;   Scheme]  (parse-cmpd-direction '("j" "2"))
+;     (("2") :direction-simple "j")
+;   Scheme]  (parse-cmpd-direction '("2" "j"))
+;     (("j") :direction-invalid "2")
+;   Scheme] (parse-cmpd-direction '("z" "f"))
+;     (("f") :direction-invalid "z")
+;   Scheme] (parse-cmpd-direction '("f" "f"))
+;     (("f") :direction-by-search "f")
 (tm-define (parse-cmpd-direction l)
   (if (null? l)
       (list l #:no-direction #f)
-      (let ((c (car l)))
+      (let ((fc (car l))) ; fc represents the first character of the input list
 	(cond
-	  ((member c directions-simple) (list (cdr l) #:direction-simple c))
-	  ((member c directions-cmpd) (list (cdr l) #:direction-by-search c))
-	  (else (list (cdr l) #:direction-invalid c))))))
-
-(parse-cmpd-direction '("0"))
-(parse-cmpd-direction '())
-(parse-cmpd-direction '("z" "f"))
-(parse-cmpd-direction '("f" "f"))
+	  ((member fc directions-simple) (list (cdr l) #:direction-simple fc))
+	  ((member fc directions-cmpd) (list (cdr l) #:direction-by-search fc))
+	  (else (list (cdr l) #:direction-invalid fc))))))
 
 (tm-define (parse-all l)
-  (let* ((l1-no (parse-prefix l))
-	 (l1 (car l1-no))
-	 (prefix-no (cadr l1-no))
-
-	 (l2-cmd (parse-normal-cmd l1))
-	 (l2 (car l2-cmd))
-	 (cmd-type (caadr l2-cmd))
-	 (cmd-char (cadr (cadr l2-cmd)))
-
-	 (l3-no (parse-posfix l2))
-	 (l3 (car l3-no))
-	 (posfix-no (cadr l3-no))
-
-	 (l4 (parse-cmpd-direction l3))
-	 (direction-search-char (parse-search-char (car l4))))
+  (let* ((posfix-with-prefix-number (parse-prefix l))
+         (posfix-string (car posfix-with-prefix-number))
+         (prefix-no (cadr posfix-with-prefix-number))
+         (l2-cmd (parse-normal-cmd posfix-string))
+         (l2 (car l2-cmd))
+         (cmd-type (caadr l2-cmd))
+         (cmd-char (cadr (cadr l2-cmd)))
+         (l3-no (parse-posfix l2))
+         (l3 (car l3-no))
+         (posfix-no (cadr l3-no))
+         (l4 (parse-cmpd-direction l3))
+         (direction-search-char (parse-search-char (car l4))))
     (cond
       ((eqv? cmd-type #:search) (list prefix-no #:search cmd-char
 				      (parse-search-char l2)))
-
       ((eqv? cmd-type #:mark) (list prefix-no #:mark cmd-char
 				    (parse-mark-char l2)))
-
       ((eqv? cmd-type #:cmpd)
        (if (equal? #:direction-invalid (cadr l4))
 	   #:invalid
@@ -133,57 +128,55 @@
       ((eqv? cmd-type #:none) (list prefix-no cmd-type cmd-char))
       (else #:invalid))))
 
-;; no cmd
 
-(equal? (parse-all '("2" "3")) (list '("2" "3") #:none #f))
-(equal? (parse-all '("2" "0")) (list '("2" "0") #:none #f))
-(equal? (parse-all '("@")) #:invalid)
+; ;; no cmd
+; (equal? (parse-all '("2" "3")) (list '("2" "3") #:none #f))
+; (equal? (parse-all '("2" "0")) (list '("2" "0") #:none #f))
+; (equal? (parse-all '("@")) #:invalid)
 
-;; hjkl without no.
-(equal? (parse-all '("0")) (list '() #:hjkl "0"))
-(equal? (parse-all '("j")) (list '() #:hjkl "j"))
+; ;; hjkl without no.
+; (equal? (parse-all '("0")) (list '() #:hjkl "0"))
+; (equal? (parse-all '("j")) (list '() #:hjkl "j"))
 
-;; hjkl with no
-(equal? (parse-all '("2" "j")) (list '("2" ) #:hjkl "j"))
-(equal? (parse-all '("2" "3" "j")) (list '("2" "3") #:hjkl "j"))
+; ;; hjkl with no
+; (equal? (parse-all '("2" "j")) (list '("2" ) #:hjkl "j"))
+; (equal? (parse-all '("2" "3" "j")) (list '("2" "3") #:hjkl "j"))
 
-;; search without no
-(equal? (parse-all '("f")) (list '() #:search "f" #f))
-(equal? (parse-all '("F" "c")) (list '() #:search "F" "c"))
+; ;; search without no
+; (equal? (parse-all '("f")) (list '() #:search "f" #f))
+; (equal? (parse-all '("F" "c")) (list '() #:search "F" "c"))
 
-;; search without no
-(equal? (parse-all '("2" "f")) (list '("2") #:search "f" #f))
-(equal? (parse-all '("2" "F" "c")) (list '("2") #:search "F" "c"))
-(equal? (parse-all '("2" "3" "f")) (list '("2" "3") #:search "f" #f))
-(equal? (parse-all '("2" "3" "F" "c")) (list '("2" "3") #:search "F" "c"))
+; ;; search without no
+; (equal? (parse-all '("2" "f")) (list '("2") #:search "f" #f))
+; (equal? (parse-all '("2" "F" "c")) (list '("2") #:search "F" "c"))
+; (equal? (parse-all '("2" "3" "f")) (list '("2" "3") #:search "f" #f))
+; (equal? (parse-all '("2" "3" "F" "c")) (list '("2" "3") #:search "F" "c"))
 
-"2"
-;; cmpd cmd
+; ;; cmpd cmd
+; (equal? (list '() #:cmpd "d" '() (list #:no-direction #f))
+; 	(parse-all '("d")))
+; (equal? #:invalid
+; 	(parse-all '("d" "@")))
 
-(equal? (list '() #:cmpd "d" '() (list #:no-direction #f))
-	(parse-all '("d")))
-(equal? #:invalid
-	(parse-all '("d" "@")))
+; ;; cmpd cmd with prefix
+; (equal? (parse-all '("2" "d"))
+; 	(list '("2") #:cmpd "d" '() (list #:no-direction #f)) )
+; (equal? (parse-all '("2" "d" "@"))
+; 	(list '("2") #:cmpd "d" '() (list #:direction-invalid "@")))
 
-;; cmpd cmd with prefix
-(equal? (parse-all '("2" "d"))
-	(list '("2") #:cmpd "d" '() (list #:no-direction #f)) )
-(equal? (parse-all '("2" "d" "@"))
-	(list '("2") #:cmpd "d" '() (list #:direction-invalid "@")))
+; (equal? (parse-all '("2" "d" "e"))
+; 	(list '("2") #:cmpd "d" '() (list #:direction-simple "e")) )
 
-(equal? (parse-all '("2" "d" "e"))
-	(list '("2") #:cmpd "d" '() (list #:direction-simple "e")) )
+; (equal? (parse-all '("2" "d" "2" "e"))
+; 	(list '("2") #:cmpd "d" '("2") (list #:direction-simple "e")) )
 
-(equal? (parse-all '("2" "d" "2" "e"))
-	(list '("2") #:cmpd "d" '("2") (list #:direction-simple "e")) )
-
-(equal? (parse-all '("2" "d" "0" "e"))
-	(list '("2") #:cmpd "d" '() (list #:direction-simple "0")) )
+; (equal? (parse-all '("2" "d" "0" "e"))
+; 	(list '("2") #:cmpd "d" '() (list #:direction-simple "0")) )
 
 
-(parse-all '("2" "d" "2" "3" "f"))
-(parse-all '("2" "d" "2" "3" "f" "c"))
-(parse-all '("2" "c" "F" "o"))
+; (parse-all '("2" "d" "2" "3" "f"))
+; (parse-all '("2" "d" "2" "3" "f" "c"))
+; (parse-all '("2" "c" "F" "o"))
 
 (tm-define (invalid? l)
   (equal? #:invalid l))
