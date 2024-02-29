@@ -1,6 +1,7 @@
 ;; vi
 ;; TODO: combine two maps colon and single char cmds
 ;; TODO: parse cmds with numbers
+;; There are many commonds such as C-u/d and "g g" are recoganized as invalid commands
 
 (texmacs-module (vi)
                 ;; (:use (generic generic-kbd)
@@ -9,13 +10,13 @@
 (import-from (normal))
 (define-public cmd-buffer '())
 
-(define-public vim-active #f)
-(define-public normal-active #t)
+(define-public vim-active #t)
+(define-public normal-active #f)
 (define-public visual-active #f)
 
 (tm-define (vim-mode?) vim-active)
 (tm-define (normal-mode?) normal-active)
-(tm-define (visual-mode?) visual-active)
+(tm-define (visual-mode?) visual-active) ;TODO
 
 
 (tm-define (toggle-vim) 
@@ -162,9 +163,9 @@
                              (clear-cmd-buffer))
 
                             ((valid-hjkl? parse-res)
-                             (when (in? cmd-char '("h" "j" "k" "l" "left" "right" "up"
+                             (when (in? cmd-char '("h" "j" "k" "l" "C-d" "C-u" "left" "right" "up"
                                                        "down" "return" "backspace" "i" "L"
-                                                       "G" "a" "A" "I" "#" "[" "]" "o" "O" "x"
+                                                       "G" "g g" "a" "A" "I" "#" "[" "]" "o" "O" "x"
                                                        "$" "0" "b" "w" "e" "u" "D" "p" "R"))
                                (let ((n (-repeat-times parse-res))
                                      (fn (vi-get-cmd cmd-char)))
@@ -209,20 +210,24 @@
  ("A-l" (kbd-right))
  )
 
-;; current hack: should be put on vi-kbd-map
+;; ;; current hack: should be put on vi-kbd-map
 ;; (kbd-map
 ;;   (:mode in-normal?)
 ;;   ("d d" (begin
 ;;            (kbd-start-line)
 ;;            (kbd-select kbd-end-line)
 ;;            (kbd-cut)
-;;            (kbd-backspace))))
+;;            (kbd-backspace)))
+;;   ("d" (kbd-delete)))
+
 
 
 (vi-kbd-map
  ("$" kbd-end-line)
  ("0" kbd-start-line)
  ("^" kbd-start-line)
+ ("C-d" kbd-page-down)
+ ("C-u" kbd-page-up)
  ("return" (lambda () (begin (kbd-down) (kbd-start-line))))
 
  ("h" kbd-left)
@@ -269,7 +274,7 @@
 
  ("G" go-end)
  ;; ("g" (noop)); HACK: avoid shoing "g" when using "gg"
- ;; ("g g" go-start) ; Bug: invalid cmds
+ ("g g" go-start) ; Bug: invalid cmds
 
  ("R" (lambda ()(update-document "all")))
 
@@ -344,6 +349,7 @@
 (ahash-set! vi-colon-map "scm" scheme)
 (ahash-set! vi-colon-map "q" (lambda (x) (safely-quit-TeXmacs)))
 (ahash-set! vi-colon-map "E" export-to-latex)
+(ahash-set! vi-colon-map "ua" (lambda (x) (update-document "all")))
 (ahash-set! vi-colon-map "q!" (lambda (x) (kill-current-window-and-buffer)))
 
 (tm-define (get-colon-cmd key)
@@ -353,8 +359,8 @@
            (ahash-set! vi-colon-map k v))
 
 
-(menu-bind insert-menu
-           (former)
-           ---
-           ("texvim" (toggle-vim))
-           )
+;; (menu-bind insert-menu
+;;            (former)
+;;            ---
+;;            ("texvim" (toggle-vim))
+;;            )

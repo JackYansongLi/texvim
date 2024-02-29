@@ -74,7 +74,7 @@
 
 ;; now posfix-number
 
-(tm-define directions-simple '("0" "h" "d" "l" "j" "k" "l" "$" "e" "b" "B" "w" "W" "*" "#" "n" "G"))
+(tm-define directions-simple '("0" "h" "d" "l" "j" "k" "l" "$" "e" "b" "B" "w" "W" "*" "#" "n" "G" "g g"))
 (tm-define directions-cmpd search-cmds)
 
 ; Examples: 
