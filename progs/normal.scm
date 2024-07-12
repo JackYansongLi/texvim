@@ -37,7 +37,7 @@
                            "." "x" "o" "O" "P" "A" "#" "*"
                            "p" "n" "N" "I" "G" "W" "B" "&"
                            "R" "L" "(" ")" "[" "]"
-                           "return" "backspace"))
+                           "return" "backspace" "C-u" "C-d"))
 (tm-define compound-cmds '("d" "c" "y"))
 (tm-define search-cmds '("f" "t" "T" "F"))
 (tm-define mark-cmds '("m" "'" "`"))

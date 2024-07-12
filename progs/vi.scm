@@ -226,8 +226,10 @@
  ("$" kbd-end-line)
  ("0" kbd-start-line)
  ("^" kbd-start-line)
- ("C-d" kbd-page-down)
- ("C-u" kbd-page-up)
+
+;; kbd-page-up invalid key
+ ("C-d" (lambda () (begin (set-message "C-d" "") (kbd-page-down))))
+ ("C-u" (lambda () (begin (set-message "C-u" "") (kbd-page-up))))
  ("return" (lambda () (begin (kbd-down) (kbd-start-line))))
 
  ("h" kbd-left)
@@ -275,6 +277,7 @@
  ("G" go-end)
  ;; ("g" (noop)); HACK: avoid shoing "g" when using "gg"
  ("g g" go-start) ; Bug: invalid cmds
+
 
  ("R" (lambda ()(update-document "all")))
 
