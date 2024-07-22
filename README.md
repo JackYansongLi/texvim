@@ -8,6 +8,7 @@ Install via
 ```bash
 cd ~/.TeXmacs/plugins && git clone https://github.com/JackYansongLi/texvim.git
 ```
-Vim keybindings are deactivated automatically. They can be activated with the 
-menu entry "Vim mode" in the "Insert" menu.
+
+## Usage
+Vim keybindings are deactivated automatically. They can be activated by pressing $\texttt{j k}$.
 

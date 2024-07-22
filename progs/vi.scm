@@ -362,8 +362,4 @@
            (ahash-set! vi-colon-map k v))
 
 
-;; (menu-bind insert-menu
-;;            (former)
-;;            ---
-;;            ("texvim" (toggle-vim))
-;;            )
+
